@@ -33,19 +33,40 @@ def _canal_xlsx_upload():
     )
 
 
+_CANAL_MAPPING = {0: "name", 1: "water_source", 2: "year_built", 3: "capacity", 4: "latitude", 5: "longitude"}
+
+
 class _StubMapper:
     def map(self, *, facility_hint, columns):
-        return MappingResult(
-            facility_type="canal",
-            mapping={
-                0: "name",
-                1: "water_source",
-                2: "year_built",
-                3: "capacity",
-                4: "latitude",
-                5: "longitude",
-            },
-        )
+        return MappingResult(facility_type="canal", mapping=dict(_CANAL_MAPPING))
+
+
+def _two_sheet_xlsx_upload(correction_capacity=3.0):
+    """Два листа с РАЗНЫМ порядком колонок, описывающие частично те же каналы."""
+    workbook = Workbook()
+    list1 = workbook.active
+    list1.title = "Лист1"
+    list1.append(["Наименование", "Водоисточник", "Год", "Расход", "Широта", "Долгота"])
+    list1.append(["Канал А", "р. Иртыш", 1973, 3.0, 50.1, 80.2])
+    list1.append(["Канал Б", "р. Иртыш", 1945, 1.5, 50.3, 80.4])
+    correction = workbook.create_sheet("Корректировка")
+    correction.append(["Водоисточник", "Наименование", "Год", "Расход", "Широта", "Долгота"])
+    correction.append(["р. Иртыш", "Канал А", 1973, correction_capacity, 50.1, 80.2])
+    correction.append(["р. Иртыш", "Канал В", 1928, 2.0, 51.0, 81.0])
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return SimpleUploadedFile("multi.xlsx", buffer.read())
+
+
+class _TwoSheetStubMapper:
+    def map(self, *, facility_hint, columns):
+        if facility_hint == "Корректировка":
+            return MappingResult(
+                "canal",
+                {0: "water_source", 1: "name", 2: "year_built", 3: "capacity", 4: "latitude", 5: "longitude"},
+            )
+        return MappingResult("canal", dict(_CANAL_MAPPING))
 
 
 class ImportEndpointTests(TestCase):
@@ -103,6 +124,28 @@ class ImportEndpointTests(TestCase):
         self.assertEqual(len(body["conflicts"]), 1)
         self.assertEqual(body["conflicts"][0]["field"], "capacity")
         self.assertFalse(Canal.objects.filter(name="Канал А", capacity=3.0).exists())
+
+    @patch("ingestion.interfaces.views.resolve_schema_mapper", return_value=_TwoSheetStubMapper())
+    def test_cross_sheet_duplicate_deduped(self, _mapper):
+        response = Client().post("/api/import/", {"file": _two_sheet_xlsx_upload()})
+
+        body = response.json()
+        # А, Б (Лист1) + В (Корректировка); повтор А с Корректировки пропущен.
+        self.assertEqual(body["created"], 3)
+        self.assertEqual(body["skipped_duplicates"], 1)
+        self.assertEqual(Canal.objects.count(), 3)
+
+    @patch("ingestion.interfaces.views.resolve_schema_mapper", return_value=_TwoSheetStubMapper())
+    def test_cross_sheet_conflict_reported(self, _mapper):
+        response = Client().post(
+            "/api/import/", {"file": _two_sheet_xlsx_upload(correction_capacity=9.9)}
+        )
+
+        body = response.json()
+        self.assertEqual(body["created"], 3)  # А, Б, В — А не пересоздан
+        self.assertEqual(len(body["conflicts"]), 1)
+        self.assertEqual(body["conflicts"][0]["sheet"], "Корректировка")
+        self.assertEqual(Canal.objects.filter(name="Канал А").count(), 1)
 
     def test_missing_file_returns_400(self):
         response = Client().post("/api/import/", {})

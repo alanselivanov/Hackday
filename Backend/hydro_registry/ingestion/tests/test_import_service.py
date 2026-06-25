@@ -16,6 +16,16 @@ class FakeMapper(SchemaMapper):
         return self._result
 
 
+class SheetAwareMapper(SchemaMapper):
+    """Возвращает свою карту маппинга для каждого листа (по его имени)."""
+
+    def __init__(self, by_sheet):
+        self._by_sheet = by_sheet
+
+    def map(self, *, facility_hint, columns):
+        return self._by_sheet[facility_hint]
+
+
 class FakeRepository(FacilityRepository):
     """In-memory репозиторий. Дедуп по ключу идентичности без пространственной части
     (ST_DWithin проверяется только в тесте против реального PostGIS)."""
@@ -174,6 +184,67 @@ class DedupAndConflictTests(unittest.TestCase):
         self.assertEqual(report.created, 2)
         self.assertEqual(report.skipped_duplicates, 0)
         self.assertEqual(report.conflicts, [])
+
+
+class MultiSheetMergeTests(unittest.TestCase):
+    """Все листы обрабатываются; одинаковые объекты на разных листах не дублируются,
+    расхождения между листами уходят в conflicts с указанием листа (#04)."""
+
+    def _sheets(self, correction_capacity):
+        # Лист1: порядок колонок «имя, водоисточник, год, расход».
+        list1 = ParsedSheet(
+            name="Лист1",
+            columns=[ColumnSample(i, n) for i, n in enumerate(("Имя", "Источник", "Год", "Расход"))],
+            rows=[
+                ["Канал А", "р. Иртыш", 1973, 3.0],
+                ["Канал Б", "р. Иртыш", 1945, 1.5],
+            ],
+        )
+        # Корректировка: ДРУГОЙ порядок колонок «водоисточник, имя, год, расход».
+        correction = ParsedSheet(
+            name="Корректировка",
+            columns=[ColumnSample(i, n) for i, n in enumerate(("Источник", "Имя", "Год", "Расход"))],
+            rows=[
+                ["р. Иртыш", "Канал А", 1973, correction_capacity],
+                ["р. Иртыш", "Канал В", 1928, 2.0],
+            ],
+        )
+        return [list1, correction]
+
+    def _mapper(self):
+        return SheetAwareMapper(
+            {
+                "Лист1": MappingResult("canal", {0: "name", 1: "water_source", 2: "year_built", 3: "capacity"}),
+                "Корректировка": MappingResult("canal", {0: "water_source", 1: "name", 2: "year_built", 3: "capacity"}),
+            }
+        )
+
+    def test_same_facility_across_sheets_is_deduped(self):
+        repo = FakeRepository()
+        service = ImportService(mapper=self._mapper(), repository=repo)
+
+        report = service.import_sheets(self._sheets(correction_capacity=3.0))
+
+        # А и Б с Лист1, В с Корректировки; повтор А — пропущен.
+        self.assertEqual(report.created, 3)
+        self.assertEqual(report.skipped_duplicates, 1)
+        self.assertEqual(
+            sorted(f["name"] for _, f in repo.created), ["Канал А", "Канал Б", "Канал В"]
+        )
+
+    def test_cross_sheet_divergence_is_conflict_tagged_with_sheet(self):
+        repo = FakeRepository()
+        service = ImportService(mapper=self._mapper(), repository=repo)
+
+        report = service.import_sheets(self._sheets(correction_capacity=9.9))
+
+        self.assertEqual(report.created, 3)  # А, Б, В — но А не пересоздан
+        self.assertEqual(report.skipped_duplicates, 0)
+        self.assertEqual(len(report.conflicts), 1)
+        conflict = report.conflicts[0]
+        self.assertEqual(conflict["field"], "capacity")
+        self.assertEqual(conflict["sheet"], "Корректировка")
+        self.assertEqual([f["name"] for _, f in repo.created].count("Канал А"), 1)
 
 
 if __name__ == "__main__":
