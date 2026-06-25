@@ -14,10 +14,12 @@ from django.views.decorators.http import require_POST
 
 from ..application.import_service import ImportService
 from ..infrastructure.llm.factory import resolve_schema_mapper
+from ..infrastructure.parsers.csv_parser import CsvParser
 from ..infrastructure.parsers.excel_parser import ExcelParser
 from ..infrastructure.persistence.facility_repository import DjangoFacilityRepository
 
 _EXCEL_EXTENSIONS = (".xlsx", ".xls")
+_SUPPORTED_EXTENSIONS = _EXCEL_EXTENSIONS + (".csv",)
 
 
 @csrf_exempt
@@ -28,14 +30,15 @@ def import_facilities(request):
         return JsonResponse({"error": "Файл не передан (поле 'file')."}, status=400)
 
     extension = os.path.splitext(upload.name)[1].lower()
-    if extension not in _EXCEL_EXTENSIONS:
+    if extension not in _SUPPORTED_EXTENSIONS:
         return JsonResponse(
-            {"error": f"Формат {extension or '?'} не поддерживается. Ожидается .xlsx или .xls."},
+            {"error": f"Формат {extension or '?'} не поддерживается. Ожидается .xlsx, .xls или .csv."},
             status=400,
         )
 
+    parser = CsvParser() if extension == ".csv" else ExcelParser()
     try:
-        sheets = ExcelParser().parse(upload)
+        sheets = parser.parse(upload)
     except ValueError as error:  # неизвестная сигнатура файла
         return JsonResponse({"error": str(error)}, status=400)
     except Exception:  # повреждённый/нечитаемый файл (BadZipFile, XLRDError, …)

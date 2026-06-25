@@ -87,7 +87,9 @@ def _samples(rows: list[list[Any]], col: int) -> list[Any]:
     return samples
 
 
-def _parse_sheet(raw: RawSheet) -> ParsedSheet:
+def parse_raw_sheet(raw: RawSheet) -> ParsedSheet:
+    """Превратить сырой лист (сетка + merge) в ParsedSheet. Формат-нейтрально —
+    используется и для Excel-листов, и для CSV (где merge просто пустой)."""
     grid = [list(row) for row in raw.grid]
     n_cols = len(grid[0]) if grid else 0
     banners = _banner_rows(raw.merged, n_cols)
@@ -129,4 +131,4 @@ def _parse_sheet(raw: RawSheet) -> ParsedSheet:
 
 class ExcelParser:
     def parse(self, file: BinaryIO) -> list[ParsedSheet]:
-        return [_parse_sheet(raw) for raw in read_workbook(file)]
+        return [parse_raw_sheet(raw) for raw in read_workbook(file)]

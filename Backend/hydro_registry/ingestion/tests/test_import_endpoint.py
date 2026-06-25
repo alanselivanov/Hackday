@@ -179,6 +179,22 @@ class ImportEndpointTests(TestCase):
         self.assertEqual(sluice.gates_count, 5)
         self.assertEqual(sluice.drive_type, "электрический")
 
+    @patch("ingestion.interfaces.views.resolve_schema_mapper", return_value=_StubMapper())
+    def test_imports_from_csv(self, _mapper):
+        text = (
+            "Наименование,Водоисточник,Год,Расход,Широта,Долгота\n"
+            "Канал А,р. Иртыш,1973,3.0,50.1,80.2\n"
+            "Канал Б,р. Иртыш,1945,1.5,50.3,80.4\n"
+        )
+        upload = SimpleUploadedFile("data.csv", text.encode("utf-8"))
+
+        response = Client().post("/api/import/", {"file": upload})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["created"], 2)
+        self.assertEqual(Canal.objects.count(), 2)
+        self.assertEqual(Canal.objects.get(name="Канал А").year_built, 1973)
+
     def test_missing_file_returns_400(self):
         response = Client().post("/api/import/", {})
         self.assertEqual(response.status_code, 400)
