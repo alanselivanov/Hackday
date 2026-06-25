@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 from django.db import transaction
@@ -17,6 +18,8 @@ from ..infrastructure.llm.factory import resolve_schema_mapper
 from ..infrastructure.parsers.csv_parser import CsvParser
 from ..infrastructure.parsers.excel_parser import ExcelParser
 from ..infrastructure.persistence.facility_repository import DjangoFacilityRepository
+
+logger = logging.getLogger(__name__)
 
 _EXCEL_EXTENSIONS = (".xlsx", ".xls")
 _SUPPORTED_EXTENSIONS = _EXCEL_EXTENSIONS + (".csv",)
@@ -52,6 +55,15 @@ def import_facilities(request):
         repository=DjangoFacilityRepository(),
     )
     # Атомарно: при сбое на любой строке частичная запись откатывается.
-    with transaction.atomic():
-        report = service.import_sheets(sheets)
+    # Ошибку LLM/БД отдаём как JSON (а не HTML-500), трейс — в лог сервера.
+    try:
+        with transaction.atomic():
+            report = service.import_sheets(sheets)
+    except Exception:
+        logger.exception("Сбой импорта при обработке файла %s", upload.name)
+        return JsonResponse(
+            {"error": "Не удалось обработать данные (возможно, недоступен LLM-сервис "
+                      "OpenRouter). Подробности — в логах сервера."},
+            status=502,
+        )
     return JsonResponse(report.as_dict(), status=200)
