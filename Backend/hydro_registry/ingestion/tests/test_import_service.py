@@ -285,6 +285,21 @@ class FacilityTypeTests(unittest.TestCase):
         self.assertEqual(fields["pumps_count"], 3)
         self.assertEqual(fields["installed_power"], 250.5)
 
+    def test_unknown_facility_type_skips_sheet_with_warning(self):
+        sheet = ParsedSheet(
+            name="странный лист",
+            columns=[ColumnSample(0, "Имя")],
+            rows=[["Объект"]],
+        )
+        repo = FakeRepository()
+        mapper = FakeMapper(MappingResult("teleport", {0: "name"}))
+        report = ImportService(mapper=mapper, repository=repo).import_sheets([sheet])
+
+        self.assertEqual(report.created, 0)
+        self.assertEqual(repo.created, [])
+        self.assertEqual(len(report.warnings), 1)
+        self.assertIn("teleport", report.warnings[0])
+
     def test_intake_boolean_coercion(self):
         _, fields = self._run(
             "intake",

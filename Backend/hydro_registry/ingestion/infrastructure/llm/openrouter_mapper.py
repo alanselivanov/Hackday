@@ -58,6 +58,17 @@ class OpenRouterSchemaMapper(SchemaMapper):
 
     @staticmethod
     def _parse(content: str) -> MappingResult:
-        data = json.loads(content)
-        mapping = {int(k): str(v) for k, v in data.get("mapping", {}).items()}
-        return MappingResult(facility_type=str(data["facility_type"]), mapping=mapping)
+        # LLM нередко оборачивает JSON в ```-блок или добавляет текст — берём {...}.
+        start, end = content.find("{"), content.rfind("}")
+        if start == -1 or end == -1:
+            raise ValueError("LLM вернул ответ без JSON-объекта.")
+        data = json.loads(content[start : end + 1])
+
+        mapping = {}
+        for key, value in (data.get("mapping") or {}).items():
+            try:
+                mapping[int(key)] = str(value)
+            except (ValueError, TypeError):
+                continue  # пропускаем некорректные пары, не роняя импорт
+        # Пустой/незнакомый facility_type отсеется валидацией в ImportService.
+        return MappingResult(facility_type=str(data.get("facility_type", "")), mapping=mapping)

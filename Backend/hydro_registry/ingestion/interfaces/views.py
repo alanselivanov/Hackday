@@ -17,7 +17,7 @@ from ..infrastructure.llm.factory import resolve_schema_mapper
 from ..infrastructure.parsers.excel_parser import ExcelParser
 from ..infrastructure.persistence.facility_repository import DjangoFacilityRepository
 
-_EXCEL_EXTENSIONS = (".xlsx",)
+_EXCEL_EXTENSIONS = (".xlsx", ".xls")
 
 
 @csrf_exempt
@@ -30,17 +30,25 @@ def import_facilities(request):
     extension = os.path.splitext(upload.name)[1].lower()
     if extension not in _EXCEL_EXTENSIONS:
         return JsonResponse(
-            {"error": f"Формат {extension or '?'} не поддерживается на этом этапе."},
+            {"error": f"Формат {extension or '?'} не поддерживается. Ожидается .xlsx или .xls."},
             status=400,
         )
 
-    sheets = ExcelParser().parse(upload)
+    try:
+        sheets = ExcelParser().parse(upload)
+    except ValueError as error:  # неизвестная сигнатура файла
+        return JsonResponse({"error": str(error)}, status=400)
+    except Exception:  # повреждённый/нечитаемый файл (BadZipFile, XLRDError, …)
+        return JsonResponse(
+            {"error": "Не удалось прочитать файл: возможно, он повреждён или это не Excel."},
+            status=400,
+        )
+
     service = ImportService(
         mapper=resolve_schema_mapper(),
         repository=DjangoFacilityRepository(),
     )
     # Атомарно: при сбое на любой строке частичная запись откатывается.
-    # Грациозная обработка повреждённых файлов/ошибок LLM — срез #08.
     with transaction.atomic():
         report = service.import_sheets(sheets)
     return JsonResponse(report.as_dict(), status=200)

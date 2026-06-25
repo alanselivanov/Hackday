@@ -7,6 +7,7 @@ Django — с фейковыми реализациями. Парсинг фай
 
 from __future__ import annotations
 
+from ..domain.field_catalog import SUPPORTED_FACILITY_TYPES
 from ..domain.identity import find_conflicts
 from ..domain.types import ImportReport, ParsedSheet
 from .ports import FacilityRepository, SchemaMapper
@@ -26,6 +27,14 @@ class ImportService:
             mapping_result = self._mapper.map(
                 facility_hint=sheet.name, columns=sheet.columns
             )
+
+            # Неизвестный тип от LLM не должен ронять импорт — пропускаем лист.
+            if mapping_result.facility_type not in SUPPORTED_FACILITY_TYPES:
+                report.warnings.append(
+                    f"Лист «{sheet.name}»: неизвестный тип сооружения "
+                    f"«{mapping_result.facility_type}», лист пропущен."
+                )
+                continue
 
             for name in unmapped_column_names(sheet, mapping_result):
                 if name not in seen_unmapped:

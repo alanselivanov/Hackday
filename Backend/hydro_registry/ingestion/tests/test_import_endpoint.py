@@ -187,3 +187,22 @@ class ImportEndpointTests(TestCase):
         upload = SimpleUploadedFile("dump.sql", b"INSERT INTO x VALUES (1);")
         response = Client().post("/api/import/", {"file": upload})
         self.assertEqual(response.status_code, 400)
+
+    def test_corrupt_xlsx_returns_400_not_500(self):
+        upload = SimpleUploadedFile("broken.xlsx", b"this is not really an xlsx")
+        response = Client().post("/api/import/", {"file": upload})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json())
+
+    @patch("ingestion.interfaces.views.resolve_schema_mapper", return_value=_StubMapper())
+    def test_empty_workbook_reports_zero_created(self, _mapper):
+        workbook = Workbook()  # один пустой лист
+        buffer = io.BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+        upload = SimpleUploadedFile("empty.xlsx", buffer.read())
+
+        response = Client().post("/api/import/", {"file": upload})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["created"], 0)
