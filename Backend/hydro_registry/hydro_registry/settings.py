@@ -111,6 +111,7 @@ INSTALLED_APPS = [
     "infrastructure",
     "monitoring",
     "analytics",
+    "ingestion",
 ]
 
 MIDDLEWARE = [
