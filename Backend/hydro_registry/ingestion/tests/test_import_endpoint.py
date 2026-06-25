@@ -13,7 +13,7 @@ from django.test import Client, TestCase
 from openpyxl import Workbook
 
 from ingestion.domain.types import MappingResult
-from infrastructure.models import Canal
+from infrastructure.models import Canal, Sluice
 
 
 def _canal_xlsx_upload():
@@ -57,6 +57,26 @@ def _two_sheet_xlsx_upload(correction_capacity=3.0):
     workbook.save(buffer)
     buffer.seek(0)
     return SimpleUploadedFile("multi.xlsx", buffer.read())
+
+
+def _sluice_xlsx_upload():
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "шлюзы"
+    worksheet.append(["Наименование", "Водоисточник", "Год", "Затворы", "Привод"])
+    worksheet.append(["Шлюз 1", "р. Иртыш", 1980, 5, "электрический"])
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return SimpleUploadedFile("sluice.xlsx", buffer.read())
+
+
+class _SluiceStubMapper:
+    def map(self, *, facility_hint, columns):
+        return MappingResult(
+            "sluice",
+            {0: "name", 1: "water_source", 2: "year_built", 3: "gates_count", 4: "drive_type"},
+        )
 
 
 class _TwoSheetStubMapper:
@@ -146,6 +166,18 @@ class ImportEndpointTests(TestCase):
         self.assertEqual(len(body["conflicts"]), 1)
         self.assertEqual(body["conflicts"][0]["sheet"], "Корректировка")
         self.assertEqual(Canal.objects.filter(name="Канал А").count(), 1)
+
+    @patch("ingestion.interfaces.views.resolve_schema_mapper", return_value=_SluiceStubMapper())
+    def test_imports_non_canal_type(self, _mapper):
+        response = Client().post("/api/import/", {"file": _sluice_xlsx_upload()})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["created"], 1)
+        sluice = Sluice.objects.get(name="Шлюз 1")
+        self.assertEqual(sluice.facility_type, "sluice")
+        self.assertEqual(sluice.gates_count, 5)
+        self.assertEqual(sluice.drive_type, "электрический")
 
     def test_missing_file_returns_400(self):
         response = Client().post("/api/import/", {})

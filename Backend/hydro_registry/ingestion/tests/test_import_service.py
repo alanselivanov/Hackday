@@ -247,5 +247,53 @@ class MultiSheetMergeTests(unittest.TestCase):
         self.assertEqual([f["name"] for _, f in repo.created].count("Канал А"), 1)
 
 
+class FacilityTypeTests(unittest.TestCase):
+    """Поля подклассов раскладываются для каждого типа сооружения (#07)."""
+
+    def _run(self, facility_type, columns, mapping, row):
+        sheet = ParsedSheet(
+            name="лист",
+            columns=[ColumnSample(i, n) for i, n in enumerate(columns)],
+            rows=[row],
+        )
+        repo = FakeRepository()
+        result = MappingResult(facility_type, mapping)
+        ImportService(mapper=FakeMapper(result), repository=repo).import_sheets([sheet])
+        self.assertEqual(len(repo.created), 1, repo.created)
+        return repo.created[0]
+
+    def test_sluice_subclass_fields(self):
+        ftype, fields = self._run(
+            "sluice",
+            ["Имя", "Источник", "Год", "Затворы", "Привод"],
+            {0: "name", 1: "water_source", 2: "year_built", 3: "gates_count", 4: "drive_type"},
+            ["Шлюз 1", "р. Иртыш", 1980, 5, "электрический"],
+        )
+        self.assertEqual(ftype, "sluice")
+        self.assertEqual(fields["gates_count"], 5)
+        self.assertIsInstance(fields["gates_count"], int)
+        self.assertEqual(fields["drive_type"], "электрический")
+
+    def test_pumping_subclass_fields(self):
+        ftype, fields = self._run(
+            "pumping",
+            ["Имя", "Источник", "Год", "Насосы", "Мощность"],
+            {0: "name", 1: "water_source", 2: "year_built", 3: "pumps_count", 4: "installed_power"},
+            ["НС-1", "р. Иртыш", 1975, 3, 250.5],
+        )
+        self.assertEqual(ftype, "pumping")
+        self.assertEqual(fields["pumps_count"], 3)
+        self.assertEqual(fields["installed_power"], 250.5)
+
+    def test_intake_boolean_coercion(self):
+        _, fields = self._run(
+            "intake",
+            ["Имя", "Источник", "Год", "Самотечный"],
+            {0: "name", 1: "water_source", 2: "year_built", 3: "is_gravity"},
+            ["Водозабор-1", "р. Иртыш", 1990, "да"],
+        )
+        self.assertIs(fields["is_gravity"], True)
+
+
 if __name__ == "__main__":
     unittest.main()

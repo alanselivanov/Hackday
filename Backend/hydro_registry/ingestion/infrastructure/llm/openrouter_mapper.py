@@ -10,7 +10,7 @@ import json
 import os
 
 from ...application.ports import SchemaMapper
-from ...domain.field_catalog import catalog_prompt
+from ...domain.field_catalog import full_catalog_prompt
 from ...domain.types import ColumnSample, MappingResult
 
 _MODEL = "openrouter/auto"
@@ -27,8 +27,7 @@ def _build_prompt(facility_hint: str, columns: list[ColumnSample]) -> str:
         samples = ", ".join(str(s) for s in col.samples)
         column_lines.append(f"[{col.index}] «{col.name}» — примеры: {samples}")
     columns_block = "\n".join(column_lines)
-    # На срезе #01 поддержан только канал; в #07 каталог станет динамическим по типу.
-    fields_block = catalog_prompt("canal")
+    fields_block = full_catalog_prompt()
     return (
         "Ты сопоставляешь колонки таблицы гидротехнических сооружений с полями реестра.\n"
         "НЕ придумывай значения. Работай только с именами колонок и примерами.\n"

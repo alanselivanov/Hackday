@@ -9,7 +9,14 @@ from __future__ import annotations
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 
-from infrastructure.models import Canal
+from infrastructure.models import (
+    Canal,
+    DamsAndDykes,
+    PumpingStation,
+    Sluice,
+    WaterIntake,
+)
+from monitoring.models import HydroPost
 
 from ...application.ports import FacilityRepository
 from ...domain.field_catalog import fields_for
@@ -17,6 +24,11 @@ from ...domain.identity import IDENTITY_FIELDS
 
 _MODEL_BY_TYPE = {
     "canal": Canal,
+    "sluice": Sluice,
+    "intake": WaterIntake,
+    "pumping": PumpingStation,
+    "dam_dyke": DamsAndDykes,
+    "post": HydroPost,
 }
 
 _MATCH_RADIUS_M = 100
