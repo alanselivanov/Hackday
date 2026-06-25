@@ -111,6 +111,7 @@ INSTALLED_APPS = [
     "infrastructure",
     "monitoring",
     "analytics",
+    "osm_import",
 ]
 
 MIDDLEWARE = [
