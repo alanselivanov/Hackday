@@ -20,7 +20,13 @@ class SchemaMapper(ABC):
 
 
 class FacilityRepository(ABC):
-    """Порт записи: создаёт сооружение нужного типа из dict значений полей."""
+    """Порт хранилища: поиск дубля по ключу идентичности и создание записи."""
+
+    @abstractmethod
+    def find_match(self, *, facility_type: str, fields: dict) -> dict | None:
+        """Существующая запись по ключу идентичности (water_source+name+year_built
+        И координаты ≤100 м) как dict значений полей, либо None если совпадения нет."""
+        ...
 
     @abstractmethod
     def create(self, *, facility_type: str, fields: dict) -> None:

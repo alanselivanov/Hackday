@@ -7,6 +7,7 @@
 import io
 from unittest.mock import patch
 
+from django.contrib.gis.geos import Point
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from openpyxl import Workbook
@@ -65,6 +66,43 @@ class ImportEndpointTests(TestCase):
         self.assertIsNotNone(canal.location)
         self.assertAlmostEqual(canal.location.x, 80.2)  # долгота
         self.assertAlmostEqual(canal.location.y, 50.1)  # широта
+
+    @patch("ingestion.interfaces.views.resolve_schema_mapper", return_value=_StubMapper())
+    def test_full_duplicate_is_skipped(self, _mapper):
+        Canal.objects.create(
+            facility_type="canal",
+            name="Канал А",
+            water_source="р. Иртыш",
+            year_built=1973,
+            capacity=3.0,
+            location=Point(80.2, 50.1, srid=4326),
+        )
+
+        response = Client().post("/api/import/", {"file": _canal_xlsx_upload()})
+
+        body = response.json()
+        self.assertEqual(body["created"], 1)  # только Канал Б
+        self.assertEqual(body["skipped_duplicates"], 1)
+        self.assertEqual(Canal.objects.count(), 2)
+
+    @patch("ingestion.interfaces.views.resolve_schema_mapper", return_value=_StubMapper())
+    def test_value_divergence_reported_as_conflict(self, _mapper):
+        Canal.objects.create(
+            facility_type="canal",
+            name="Канал А",
+            water_source="р. Иртыш",
+            year_built=1973,
+            capacity=9.9,  # расходится с входящим 3.0
+            location=Point(80.2, 50.1, srid=4326),
+        )
+
+        response = Client().post("/api/import/", {"file": _canal_xlsx_upload()})
+
+        body = response.json()
+        self.assertEqual(body["created"], 1)  # Канал Б создан, Канал А — нет
+        self.assertEqual(len(body["conflicts"]), 1)
+        self.assertEqual(body["conflicts"][0]["field"], "capacity")
+        self.assertFalse(Canal.objects.filter(name="Канал А", capacity=3.0).exists())
 
     def test_missing_file_returns_400(self):
         response = Client().post("/api/import/", {})

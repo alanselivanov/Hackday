@@ -4,6 +4,7 @@ import unittest
 
 from ingestion.application.import_service import ImportService
 from ingestion.application.ports import FacilityRepository, SchemaMapper
+from ingestion.domain.identity import IDENTITY_FIELDS
 from ingestion.domain.types import ColumnSample, MappingResult, ParsedSheet
 
 
@@ -16,8 +17,20 @@ class FakeMapper(SchemaMapper):
 
 
 class FakeRepository(FacilityRepository):
-    def __init__(self):
+    """In-memory репозиторий. Дедуп по ключу идентичности без пространственной части
+    (ST_DWithin проверяется только в тесте против реального PostGIS)."""
+
+    def __init__(self, existing=None):
         self.created = []
+        self._seed = list(existing or [])
+
+    def find_match(self, *, facility_type, fields):
+        for stored_type, stored in self._seed + self.created:
+            if stored_type != facility_type:
+                continue
+            if all(stored.get(k) == fields.get(k) for k in IDENTITY_FIELDS):
+                return stored
+        return None
 
     def create(self, *, facility_type, fields):
         self.created.append((facility_type, fields))
@@ -112,6 +125,55 @@ class ImportServiceTests(unittest.TestCase):
 
         _, fields = repo.created[0]
         self.assertEqual(fields["state_act"], "123")
+
+
+class DedupAndConflictTests(unittest.TestCase):
+    def _existing_canal_a(self, **overrides):
+        fields = {
+            "name": "Канал А",
+            "water_source": "р. Иртыш",
+            "year_built": 1973,
+            "capacity": 3.0,
+        }
+        fields.update(overrides)
+        return [("canal", fields)]
+
+    def test_full_match_is_skipped_not_created(self):
+        repo = FakeRepository(existing=self._existing_canal_a())
+        service = ImportService(mapper=FakeMapper(_MAPPING), repository=repo)
+
+        report = service.import_sheets([_canal_sheet()])
+
+        # Канал А совпал полностью → пропущен; Канал Б новый → создан.
+        self.assertEqual(report.created, 1)
+        self.assertEqual(report.skipped_duplicates, 1)
+        self.assertEqual([f["name"] for _, f in repo.created], ["Канал Б"])
+
+    def test_value_divergence_is_a_conflict_not_written(self):
+        repo = FakeRepository(existing=self._existing_canal_a(capacity=9.9))
+        service = ImportService(mapper=FakeMapper(_MAPPING), repository=repo)
+
+        report = service.import_sheets([_canal_sheet()])
+
+        self.assertEqual(report.created, 1)  # только Канал Б
+        self.assertEqual(report.skipped_duplicates, 0)
+        self.assertEqual(len(report.conflicts), 1)
+        conflict = report.conflicts[0]
+        self.assertEqual(conflict["field"], "capacity")
+        self.assertEqual(conflict["existing"], 9.9)
+        self.assertEqual(conflict["incoming"], 3.0)
+        self.assertEqual(conflict["sheet"], "каналы")
+        self.assertNotIn("Канал А", [f["name"] for _, f in repo.created])
+
+    def test_no_match_creates_record(self):
+        repo = FakeRepository(existing=self._existing_canal_a(name="Другой канал"))
+        service = ImportService(mapper=FakeMapper(_MAPPING), repository=repo)
+
+        report = service.import_sheets([_canal_sheet()])
+
+        self.assertEqual(report.created, 2)
+        self.assertEqual(report.skipped_duplicates, 0)
+        self.assertEqual(report.conflicts, [])
 
 
 if __name__ == "__main__":

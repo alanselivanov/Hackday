@@ -7,6 +7,7 @@ Django — с фейковыми реализациями. Парсинг фай
 
 from __future__ import annotations
 
+from ..domain.identity import find_conflicts
 from ..domain.types import ImportReport, ParsedSheet
 from .ports import FacilityRepository, SchemaMapper
 from .row_mapper import build_records, unmapped_column_names
@@ -39,9 +40,22 @@ class ImportService:
                         f"Лист «{sheet.name}»: строка пропущена — нет наименования."
                     )
                     continue
-                self._repository.create(
-                    facility_type=mapping_result.facility_type, fields=record
+
+                facility_type = mapping_result.facility_type
+                existing = self._repository.find_match(
+                    facility_type=facility_type, fields=record
                 )
+                if existing is not None:
+                    conflicts = find_conflicts(record, existing, sheet=sheet.name)
+                    if conflicts:
+                        # Расхождение значений — запись не пишем (ADR-0002).
+                        report.conflicts.extend(conflicts)
+                    else:
+                        # Полное совпадение — дубль, пропускаем.
+                        report.skipped_duplicates += 1
+                    continue
+
+                self._repository.create(facility_type=facility_type, fields=record)
                 report.created += 1
 
         return report
