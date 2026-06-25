@@ -1,0 +1,43 @@
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.default {
+  color: #0f172a;
+}
+
+.teal {
+  color: #0d9488;
+}
+
+.green {
+  color: #16a34a;
+}
+
+.yellow {
+  color: #ca8a04;
+}
+
+.orange {
+  color: #ea580c;
+}
+
+.red {
+  color: #dc2626;
+}

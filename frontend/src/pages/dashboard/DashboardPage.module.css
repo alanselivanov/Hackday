@@ -1,0 +1,164 @@
+.page {
+  max-width: 1840px;
+  margin: 0 auto;
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mapSection {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+  min-height: 460px;
+}
+
+.mapCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 460px;
+}
+
+.detailsCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 460px;
+  max-height: 520px;
+}
+
+.riskSection {
+  max-width: 100%;
+}
+
+.riskList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.riskItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.riskItem:hover {
+  background: #f8fafc;
+}
+
+.riskItemSelected {
+  background: #ecfdf5;
+  border-color: #99f6e4;
+  box-shadow: inset 3px 0 0 #0d9488;
+}
+
+.riskName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.riskMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.riskScore {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f766e;
+  min-width: 28px;
+  text-align: right;
+}
+
+.tableSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.explanation {
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+  border-color: #99f6e4;
+}
+
+.explanationTitle {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.explanationText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #134e4a;
+  max-width: 960px;
+}
+
+@media (max-width: 1400px) {
+  .statsRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .mapSection {
+    grid-template-columns: 1fr;
+  }
+
+  .detailsCard {
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 16px;
+  }
+
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .riskItem {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+}
