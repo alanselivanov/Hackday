@@ -121,8 +121,7 @@ class ImportServiceTests(unittest.TestCase):
         report = service.import_sheets([sheet])
 
         self.assertEqual(report.created, 2)
-        self.assertEqual(len(report.warnings), 1)
-        self.assertIn("наименовани", report.warnings[0].lower())
+        self.assertTrue(any("наименовани" in w.lower() for w in report.warnings))
 
     def test_integral_float_strings_drop_trailing_zero(self):
         # state_act — строковое поле; число из Excel не должно стать "123.0".
@@ -245,6 +244,37 @@ class MultiSheetMergeTests(unittest.TestCase):
         self.assertEqual(conflict["field"], "capacity")
         self.assertEqual(conflict["sheet"], "Корректировка")
         self.assertEqual([f["name"] for _, f in repo.created].count("Канал А"), 1)
+
+
+class MissingKeyWarningTests(unittest.TestCase):
+    """Записи без полного ключа склейки создаются, но с предупреждением (#05)."""
+
+    def _sheet_with_coords(self, with_coords):
+        columns = [ColumnSample(i, n) for i, n in enumerate(("Имя", "Источник", "Год", "Широта", "Долгота"))]
+        row = ["Канал А", "р. Иртыш", 1973, 50.1, 80.2] if with_coords else ["Канал А", "р. Иртыш", 1973, None, None]
+        return ParsedSheet(name="лист", columns=columns, rows=[row])
+
+    _MAP = MappingResult(
+        "canal", {0: "name", 1: "water_source", 2: "year_built", 3: "latitude", 4: "longitude"}
+    )
+
+    def test_record_without_coords_warns(self):
+        repo = FakeRepository()
+        report = ImportService(mapper=FakeMapper(self._MAP), repository=repo).import_sheets(
+            [self._sheet_with_coords(with_coords=False)]
+        )
+
+        self.assertEqual(report.created, 1)
+        self.assertTrue(any("ключа склейки" in w for w in report.warnings))
+
+    def test_record_with_full_key_does_not_warn(self):
+        repo = FakeRepository()
+        report = ImportService(mapper=FakeMapper(self._MAP), repository=repo).import_sheets(
+            [self._sheet_with_coords(with_coords=True)]
+        )
+
+        self.assertEqual(report.created, 1)
+        self.assertEqual(report.warnings, [])
 
 
 class FacilityTypeTests(unittest.TestCase):

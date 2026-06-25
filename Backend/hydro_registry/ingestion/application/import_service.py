@@ -8,7 +8,7 @@ Django — с фейковыми реализациями. Парсинг фай
 from __future__ import annotations
 
 from ..domain.field_catalog import SUPPORTED_FACILITY_TYPES
-from ..domain.identity import find_conflicts
+from ..domain.identity import find_conflicts, has_full_identity
 from ..domain.types import ImportReport, ParsedSheet
 from .ports import FacilityRepository, SchemaMapper
 from .row_mapper import build_records, unmapped_column_names
@@ -41,6 +41,7 @@ class ImportService:
                     seen_unmapped.add(name)
                     report.unmapped_columns.append(name)
 
+            no_key_created = 0  # созданы без полного ключа склейки — возможны дубли
             for record in build_records(sheet, mapping_result):
                 # name — обязательное поле модели; без него запись бессмысленна и
                 # молча сохранилась бы с пустой строкой. Пропускаем с предупреждением.
@@ -64,7 +65,15 @@ class ImportService:
                         report.skipped_duplicates += 1
                     continue
 
+                if not has_full_identity(record):
+                    no_key_created += 1
                 self._repository.create(facility_type=facility_type, fields=record)
                 report.created += 1
+
+            if no_key_created:
+                report.warnings.append(
+                    f"Лист «{sheet.name}»: {no_key_created} запис(ей) созданы без полного "
+                    f"ключа склейки (нет координат/идентичности) — возможны дубли."
+                )
 
         return report

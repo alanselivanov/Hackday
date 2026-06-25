@@ -25,6 +25,16 @@ def identity_label(fields: dict) -> str:
     return " | ".join(str(fields.get(f, "")) for f in IDENTITY_FIELDS)
 
 
+def has_full_identity(fields: dict) -> bool:
+    """Есть ли полный ключ склейки: water_source+name+year_built и координаты.
+    Без него дедупликация невозможна — запись может оказаться дублем."""
+    for field in IDENTITY_FIELDS:
+        value = fields.get(field)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return False
+    return fields.get("latitude") is not None and fields.get("longitude") is not None
+
+
 def _values_equal(a: Any, b: Any) -> bool:
     if isinstance(a, (int, float)) and isinstance(b, (int, float)):
         return math.isclose(float(a), float(b), rel_tol=_FLOAT_TOL, abs_tol=_FLOAT_TOL)
