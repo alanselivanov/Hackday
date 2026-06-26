@@ -49,6 +49,7 @@ class MockDataGenerator:
         generated: list[str],
     ) -> dict:
         tags = obj.tags
+        safety_class = self._generate_safety_class(obj.facility_type, rng)
         fields = {
             "facility_type": obj.facility_type,
             "name": obj.name,
@@ -62,6 +63,10 @@ class MockDataGenerator:
             "efficiency_project": round(rng.uniform(0.65, 0.92), 2),
             "efficiency_fact": round(rng.uniform(0.55, 0.88), 2),
             "is_emergency_prone": rng.random() < 0.1,
+            "safety_class": safety_class,
+            "design_service_life": 100 if safety_class in (1, 2) else 50,
+            "is_seasonal_risk": rng.random() < 0.35,
+            "has_pressure_front": obj.facility_type in ("dam_dyke", "sluice", "intake"),
         }
         generated.extend(
             [
@@ -74,6 +79,10 @@ class MockDataGenerator:
                 "efficiency_project",
                 "efficiency_fact",
                 "is_emergency_prone",
+                "safety_class",
+                "design_service_life",
+                "is_seasonal_risk",
+                "has_pressure_front",
             ]
         )
         if tags.get("operator"):
@@ -191,3 +200,11 @@ class MockDataGenerator:
             return float(value)
         except ValueError:
             return None
+
+    @staticmethod
+    def _generate_safety_class(facility_type: str | None, rng: random.Random) -> int:
+        if facility_type in ("dam_dyke", "pumping"):
+            return rng.choice([1, 2])
+        if facility_type in ("sluice", "intake"):
+            return rng.choice([2, 3])
+        return rng.choice([3, 4])

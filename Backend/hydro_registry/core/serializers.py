@@ -1,3 +1,5 @@
+from django.core.exceptions import ObjectDoesNotExist
+
 from infrastructure.models import Canal, DamsAndDykes, PumpingStation, Sluice, WaterIntake
 from monitoring.models import HydroPost
 
@@ -6,6 +8,36 @@ def serialize_location(point):
     if not point:
         return None
     return {"type": "Point", "coordinates": [point.x, point.y]}
+
+
+def serialize_analytics(facility):
+    try:
+        analytics = facility.analytics
+    except ObjectDoesNotExist:
+        return None
+
+    next_inspection_date = analytics.next_inspection_date
+    status_changed_at = analytics.status_changed_at
+    updated_at = analytics.updated_at
+
+    return {
+        "repair_status": analytics.repair_status,
+        "repair_status_display": analytics.get_repair_status_display(),
+        "inspection_interval_days": analytics.inspection_interval_days,
+        "next_inspection_date": (
+            next_inspection_date.isoformat() if next_inspection_date else None
+        ),
+        "calculated_importance": analytics.calculated_importance,
+        "calculated_importance_display": analytics.get_calculated_importance_display(),
+        "condition_score": analytics.condition_score,
+        "repair_status_reason": analytics.repair_status_reason,
+        "requires_verification": analytics.requires_verification,
+        "last_inspection_id": (
+            analytics.last_inspection_id if analytics.last_inspection_id else None
+        ),
+        "status_changed_at": status_changed_at.isoformat() if status_changed_at else None,
+        "updated_at": updated_at.isoformat() if updated_at else None,
+    }
 
 
 def serialize_facility(facility):
@@ -27,6 +59,7 @@ def serialize_facility(facility):
         "efficiency_project": facility.efficiency_project,
         "efficiency_fact": facility.efficiency_fact,
         "is_emergency_prone": facility.is_emergency_prone,
+        "analytics": serialize_analytics(facility),
         "specific": _serialize_specific(facility),
     }
     return data
