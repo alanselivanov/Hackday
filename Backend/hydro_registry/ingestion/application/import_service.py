@@ -7,7 +7,7 @@ Django — с фейковыми реализациями. Парсинг фай
 
 from __future__ import annotations
 
-from ..domain.field_catalog import SUPPORTED_FACILITY_TYPES
+from ..domain.field_catalog import SUPPORTED_FACILITY_TYPES, normalize_facility_type
 from ..domain.identity import find_conflicts, has_full_identity
 from ..domain.types import ImportReport, ParsedSheet
 from .ports import FacilityRepository, SchemaMapper
@@ -51,7 +51,20 @@ class ImportService:
                     )
                     continue
 
+                # Тип берём из колонки строки (если есть), иначе — тип листа (ADR-0004).
                 facility_type = mapping_result.facility_type
+                row_type_raw = record.pop("facility_type", None)
+                if row_type_raw is not None:
+                    override = normalize_facility_type(row_type_raw)
+                    if override is None:
+                        report.warnings.append(
+                            f"Лист «{sheet.name}»: строка «{record.get('name')}» — "
+                            f"нераспознанный тип объекта «{row_type_raw}», "
+                            f"использован тип листа «{facility_type}»."
+                        )
+                    else:
+                        facility_type = override
+
                 existing = self._repository.find_match(
                     facility_type=facility_type, fields=record
                 )
@@ -67,7 +80,11 @@ class ImportService:
 
                 if not has_full_identity(record):
                     no_key_created += 1
-                self._repository.create(facility_type=facility_type, fields=record)
+                detail = self._repository.create(
+                    facility_type=facility_type, fields=record
+                )
+                if detail:
+                    report.facilities.append(detail)
                 report.created += 1
 
             if no_key_created:

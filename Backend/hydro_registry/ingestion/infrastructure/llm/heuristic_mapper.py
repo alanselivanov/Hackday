@@ -24,6 +24,7 @@ _TYPE_KEYWORDS = [
 
 # (поле, требуемые подстроки) — порядок важен: более специфичные правила выше.
 _RULES: list[tuple[str, tuple[str, ...]]] = [
+    ("facility_type", ("тип", "объект")),
     ("district", ("район",)),
     ("name", ("наименован",)),
     ("name", ("название",)),
@@ -32,6 +33,8 @@ _RULES: list[tuple[str, tuple[str, ...]]] = [
     ("year_balanced", ("баланс",)),
     ("year_built", ("год", "ввод")),
     ("year_built", ("год",)),
+    # detected_wear_override ДО wear_percentage: «износ по осмотру» специфичнее «износа».
+    ("detected_wear_override", ("износ", "осмотр")),
     ("wear_percentage", ("износ",)),
     ("efficiency_fact", ("факт",)),
     ("efficiency_project", ("проект",)),
@@ -42,6 +45,29 @@ _RULES: list[tuple[str, tuple[str, ...]]] = [
     ("uid", ("реестр",)),
     ("latitude", ("широта",)),
     ("longitude", ("долгота",)),
+    # Паспортные поля для расчёта периода осмотра / эскалации статуса (ADR-0004).
+    ("safety_class", ("класс",)),
+    ("design_service_life", ("срок", "служб")),
+    ("is_seasonal_risk", ("сезон",)),
+    ("is_seasonal_risk", ("паводок",)),
+    ("has_pressure_front", ("напорн",)),
+    ("is_emergency_prone", ("аварийност",)),
+    # Осмотровые поля → InspectionLog. Порядок важен для пар с общей подстрокой.
+    ("inspection_date", ("дата", "осмотр")),
+    ("inspection_type", ("тип", "осмотр")),
+    ("inspector_name", ("инспектор",)),
+    ("inspector_name", ("фио",)),
+    ("crack_width", ("раскрыти",)),            # ДО crack_criticality
+    ("crack_criticality", ("критичн", "трещин")),
+    ("crack_criticality", ("трещин",)),
+    ("filtration_rate", ("расход", "фильтрац")),  # ДО has_filtration
+    ("has_filtration", ("фильтрац",)),
+    ("deformation_value", ("смещени",)),
+    ("deformation_value", ("просадк",)),
+    ("has_deformation", ("деформац",)),
+    ("siltation_percentage", ("заилен",)),
+    ("equipment_malfunction", ("поломк",)),
+    ("equipment_malfunction", ("неисправн",)),
     # канал
     ("earth_length", ("землян",)),
     ("lined_length", ("облиц",)),

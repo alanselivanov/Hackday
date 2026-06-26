@@ -29,5 +29,8 @@ class FacilityRepository(ABC):
         ...
 
     @abstractmethod
-    def create(self, *, facility_type: str, fields: dict) -> None:
+    def create(self, *, facility_type: str, fields: dict) -> dict | None:
+        """Создаёт сооружение (и, при наличии findings, осмотр + аналитику).
+        Возвращает per-facility результат для отчёта (см. ADR-0004) или None,
+        если реализация не собирает детали (например, фейк в юнит-тестах)."""
         ...
