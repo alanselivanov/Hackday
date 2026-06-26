@@ -41,6 +41,10 @@ class ImportReport:
     conflicts: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     unmapped_columns: list[str] = field(default_factory=list)
+    # По записи на каждое созданное сооружение: что загрузилось + статус ремонта
+    # (модуль 6) + период осмотра (модуль 5) с обоснованием. Заполняется слоем
+    # persistence (ADR-0004); фейковые репозитории в юнит-тестах его не наполняют.
+    facilities: list[dict] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return {
@@ -49,4 +53,5 @@ class ImportReport:
             "conflicts": self.conflicts,
             "warnings": self.warnings,
             "unmapped_columns": self.unmapped_columns,
+            "facilities": self.facilities,
         }

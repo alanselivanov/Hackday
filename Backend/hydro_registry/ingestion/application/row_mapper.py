@@ -5,10 +5,14 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Any
 
 from ..domain.field_catalog import fields_for
 from ..domain.types import MappingResult, ParsedSheet
+
+# Форматы дат, встречающиеся в госвыгрузках (ISO и российский с точками).
+_DATE_FORMATS = ("%Y-%m-%d", "%d.%m.%Y", "%d.%m.%y", "%Y/%m/%d")
 
 
 def coerce(raw: Any, field_type: str) -> Any:
@@ -35,6 +39,15 @@ def coerce(raw: Any, field_type: str) -> Any:
             return float(raw)
         except (ValueError, TypeError):
             return None
+    if field_type == "date":
+        if isinstance(raw, (datetime, date)):
+            return raw.date() if isinstance(raw, datetime) else raw
+        for fmt in _DATE_FORMATS:
+            try:
+                return datetime.strptime(str(raw).strip(), fmt).date()
+            except ValueError:
+                continue
+        return None
     if field_type == "bool":
         if isinstance(raw, bool):
             return raw
