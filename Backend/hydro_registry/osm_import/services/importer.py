@@ -1,13 +1,14 @@
 import logging
 from dataclasses import dataclass, field
-from datetime import timedelta
 
 from django.contrib.gis.geos import Point
 from django.db import transaction
 from django.utils import timezone
 
-from analytics.models import FacilityAnalytics
+from analytics.calculation_inputs import ensure_calculation_inputs
+from analytics.services import recalculate_status
 from core.models import BaseHydroFacility
+from inspection_service import run_for_facility
 from osm_import.models import OSMImportRecord
 from osm_import.services.classifier import FacilityClassifier
 from osm_import.services.client import OSMClient
@@ -100,6 +101,8 @@ class FacilityImporter:
             outcome.import_record.last_seen_at = now
             outcome.import_record.raw_tags = obj.tags
             outcome.import_record.save(update_fields=["last_seen_at", "raw_tags"])
+            if outcome.import_record.facility:
+                self._recalculate_analytics(outcome.import_record.facility)
             return
 
         if outcome.matched_facility:
@@ -116,6 +119,7 @@ class FacilityImporter:
                     "last_seen_at": now,
                 },
             )
+            self._recalculate_analytics(outcome.matched_facility)
 
     @transaction.atomic
     def _create_facility(self, obj, stats: ImportStatistics):
@@ -135,7 +139,7 @@ class FacilityImporter:
         facility_data.update(mock_result.type_fields)
 
         facility = model_class.objects.create(**facility_data)
-        self._create_analytics(facility)
+        self._recalculate_analytics(facility)
 
         content_type = FacilityMatcher.get_content_type_for_facility(facility)
         OSMImportRecord.objects.create(
@@ -157,18 +161,13 @@ class FacilityImporter:
             obj.osm_id,
         )
 
-    def _create_analytics(self, facility: BaseHydroFacility):
-        today = timezone.now().date()
-        importance = self._calculate_importance(facility)
-        repair_status = "inspection_required" if facility.wear_percentage > 25 else "normal"
-
-        FacilityAnalytics.objects.create(
-            facility=facility,
-            repair_status=repair_status,
-            inspection_interval_days=365,
-            next_inspection_date=today + timedelta(days=365),
-            calculated_importance=importance,
-        )
+    def _recalculate_analytics(self, facility: BaseHydroFacility):
+        ensure_calculation_inputs(facility)
+        run_for_facility(facility)
+        analytics = facility.analytics
+        analytics.calculated_importance = self._calculate_importance(facility)
+        analytics.save(update_fields=["calculated_importance", "updated_at"])
+        recalculate_status(analytics)
 
     def _calculate_importance(self, facility: BaseHydroFacility) -> str:
         if facility.facility_type in ("dam_dyke", "pumping"):

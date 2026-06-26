@@ -11,7 +11,7 @@ class FacilityListAPIView(View):
     VALID_TYPES = {choice[0] for choice in BaseHydroFacility.FACILITY_TYPES}
 
     def get(self, request):
-        queryset = BaseHydroFacility.objects.all().order_by("id")
+        queryset = BaseHydroFacility.objects.select_related("analytics").order_by("id")
 
         raw_types = request.GET.get("facility_type", "")
         if raw_types:
