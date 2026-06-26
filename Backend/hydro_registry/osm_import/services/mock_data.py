@@ -10,6 +10,7 @@ from osm_import.services.normalizer import NormalizedOSMObject, OSMObjectNormali
 class MockGenerationResult:
     base_fields: dict
     type_fields: dict
+    inspection_fields: dict = field(default_factory=dict)
     generated_fields: list[str] = field(default_factory=list)
 
 
@@ -35,10 +36,12 @@ class MockDataGenerator:
 
         base_fields = self._generate_base_fields(obj, rng, generated)
         type_fields = self._generate_type_fields(obj, rng, generated)
+        inspection_fields = self._generate_inspection_fields(rng, generated)
 
         return MockGenerationResult(
             base_fields=base_fields,
             type_fields=type_fields,
+            inspection_fields=inspection_fields,
             generated_fields=generated,
         )
 
@@ -190,6 +193,65 @@ class MockDataGenerator:
             return fields
 
         return {}
+
+    def _generate_inspection_fields(self, rng: random.Random, generated: list[str]) -> dict:
+        profile = rng.choices(
+            population=("normal", "inspection_required", "repair_required", "critical"),
+            weights=(45, 25, 20, 10),
+            k=1,
+        )[0]
+
+        fields = {
+            "inspection_type": "planned",
+            "has_cracks": False,
+            "crack_criticality": 0,
+            "is_silted": False,
+            "siltation_percentage": 0.0,
+            "has_filtration": False,
+            "filtration_rate": None,
+            "has_deformation": False,
+            "deformation_value": None,
+            "crack_width": None,
+            "equipment_malfunction": False,
+            "detected_wear_override": round(rng.uniform(5, 45), 1),
+        }
+
+        if profile == "inspection_required":
+            scenario = rng.choice(("minor_cracks", "minor_siltation", "high_wear", "post_accident"))
+            if scenario == "minor_cracks":
+                fields.update(has_cracks=True, crack_criticality=1, crack_width=round(rng.uniform(0.1, 0.4), 2))
+            elif scenario == "minor_siltation":
+                fields.update(is_silted=True, siltation_percentage=round(rng.uniform(10, 45), 1))
+            elif scenario == "high_wear":
+                fields["detected_wear_override"] = round(rng.uniform(60, 78), 1)
+            else:
+                fields["inspection_type"] = "post_accident"
+
+        elif profile == "repair_required":
+            scenario = rng.choice(("medium_cracks", "filtration", "deformation", "malfunction", "heavy_siltation", "severe_wear"))
+            if scenario == "medium_cracks":
+                fields.update(has_cracks=True, crack_criticality=2, crack_width=round(rng.uniform(0.5, 1.5), 2))
+            elif scenario == "filtration":
+                fields["has_filtration"] = True
+            elif scenario == "deformation":
+                fields["has_deformation"] = True
+            elif scenario == "malfunction":
+                fields["equipment_malfunction"] = True
+            elif scenario == "heavy_siltation":
+                fields.update(is_silted=True, siltation_percentage=round(rng.uniform(50, 85), 1))
+            else:
+                fields["detected_wear_override"] = round(rng.uniform(80, 92), 1)
+
+        elif profile == "critical":
+            fields.update(
+                has_cracks=True,
+                crack_criticality=3,
+                crack_width=round(rng.uniform(1.6, 4.0), 2),
+                detected_wear_override=round(rng.uniform(70, 95), 1),
+            )
+
+        generated.extend(list(fields.keys()))
+        return fields
 
     @staticmethod
     def _tag_float(tags: dict[str, str], key: str) -> float | None:
