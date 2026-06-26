@@ -9,6 +9,7 @@ from analytics.calculation_inputs import ensure_calculation_inputs
 from analytics.services import recalculate_status
 from core.models import BaseHydroFacility
 from inspection_service import run_for_facility
+from monitoring.models import InspectionLog
 from osm_import.models import OSMImportRecord
 from osm_import.services.classifier import FacilityClassifier
 from osm_import.services.client import OSMClient
@@ -102,6 +103,8 @@ class FacilityImporter:
             outcome.import_record.raw_tags = obj.tags
             outcome.import_record.save(update_fields=["last_seen_at", "raw_tags"])
             if outcome.import_record.facility:
+                mock_result = self.mock_generator.generate(obj)
+                self._ensure_mock_inspection(outcome.import_record.facility, mock_result.inspection_fields)
                 self._recalculate_analytics(outcome.import_record.facility)
             return
 
@@ -119,6 +122,8 @@ class FacilityImporter:
                     "last_seen_at": now,
                 },
             )
+            mock_result = self.mock_generator.generate(obj)
+            self._ensure_mock_inspection(outcome.matched_facility, mock_result.inspection_fields)
             self._recalculate_analytics(outcome.matched_facility)
 
     @transaction.atomic
@@ -139,6 +144,7 @@ class FacilityImporter:
         facility_data.update(mock_result.type_fields)
 
         facility = model_class.objects.create(**facility_data)
+        self._ensure_mock_inspection(facility, mock_result.inspection_fields)
         self._recalculate_analytics(facility)
 
         content_type = FacilityMatcher.get_content_type_for_facility(facility)
@@ -159,6 +165,17 @@ class FacilityImporter:
             obj.facility_type,
             obj.osm_type,
             obj.osm_id,
+        )
+
+    def _ensure_mock_inspection(self, facility: BaseHydroFacility, inspection_fields: dict):
+        if facility.inspection_logs.exists():
+            return
+
+        InspectionLog.objects.create(
+            facility=facility,
+            inspection_date=timezone.localdate(),
+            inspector_name="Импорт OSM",
+            **inspection_fields,
         )
 
     def _recalculate_analytics(self, facility: BaseHydroFacility):

@@ -5,6 +5,7 @@ from django.test import TestCase
 
 from analytics.models import FacilityAnalytics
 from infrastructure.models import Canal
+from monitoring.models import InspectionLog
 from osm_import.models import OSMImportRecord
 from osm_import.services.importer import FacilityImporter
 
@@ -42,6 +43,7 @@ class FacilityImporterTests(TestCase):
         self.assertEqual(Canal.objects.count(), 1)
         self.assertEqual(OSMImportRecord.objects.count(), 2)
         self.assertEqual(FacilityAnalytics.objects.count(), 2)
+        self.assertEqual(InspectionLog.objects.count(), 2)
 
     @patch("osm_import.services.client.OSMClient.fetch_facilities")
     def test_reimport_no_duplicates(self, mock_fetch):
