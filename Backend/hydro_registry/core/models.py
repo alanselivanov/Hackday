@@ -26,6 +26,16 @@ class BaseHydroFacility(models.Model):
     efficiency_project = models.FloatField(null=True, blank=True, verbose_name="КПД проектный")
     efficiency_fact = models.FloatField(null=True, blank=True, verbose_name="КПД фактический")
     is_emergency_prone = models.BooleanField(default=False, verbose_name="Флаг повышенной аварийности")
+    SAFETY_CLASS_CHOICES = [
+        (1, 'I класс'),
+        (2, 'II класс'),
+        (3, 'III класс'),
+        (4, 'IV класс'),
+    ]
+    safety_class = models.IntegerField(null=True, blank=True, choices=SAFETY_CLASS_CHOICES, verbose_name="Класс ГТС (по прил. 2 СНиП РК 3.04-01-2008)")
+    design_service_life = models.IntegerField(null=True, blank=True, verbose_name="Расчётный срок службы, лет (по классу, п. 5.3.7)")
+    is_seasonal_risk = models.BooleanField(default=False, verbose_name="Чувствителен к паводку/ледоставу (учащение осмотров в сезон)")
+    has_pressure_front = models.BooleanField(default=False, verbose_name="Участвует в создании напорного фронта (СНиП 5.1.3, 5.3.7)")
 
     def __str__(self):
         return f"{self.get_facility_type_display()}: {self.name}"
