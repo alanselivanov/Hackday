@@ -17,7 +17,14 @@ class InspectionLog(models.Model):
         (2, 'Средние дефекты'),
         (3, 'Сквозные/Критические трещины')
     ]
+    INSPECTION_TYPE_CHOICES = [
+        ('planned', 'Плановый'),
+        ('post_accident', 'После аварии'),
+        ('post_repair', 'После ремонта'),
+        ('commissioning', 'При вводе в эксплуатацию'),
+    ]
     facility = models.ForeignKey(BaseHydroFacility, on_delete=models.CASCADE, related_name="inspection_logs", verbose_name="Объект")
+    inspection_type = models.CharField(max_length=20, choices=INSPECTION_TYPE_CHOICES, default='planned', verbose_name="Тип триггерного события осмотра")
     inspection_date = models.DateField(verbose_name="Дата проведения осмотра")
     inspector_name = models.CharField(max_length=255, verbose_name="ФИО инспектора")
     has_cracks = models.BooleanField(default=False, verbose_name="Наличие трещин/разрушений бетона")
@@ -25,7 +32,10 @@ class InspectionLog(models.Model):
     is_silted = models.BooleanField(default=False, verbose_name="Заилено/заращено ли русло")
     siltation_percentage = models.FloatField(default=0.0, verbose_name="Процент заиления русла (0.0 - 100.0)")
     has_filtration = models.BooleanField(default=False, verbose_name="Наличие опасной фильтрации/утечки воды")
+    filtration_rate = models.FloatField(null=True, blank=True, verbose_name="Измеренный расход фильтрации, л/с (для сравнения с K1/K2)")
     has_deformation = models.BooleanField(default=False, verbose_name="Наличие просадок, сдвигов плит, пучения грунта")
+    deformation_value = models.FloatField(null=True, blank=True, verbose_name="Измеренное смещение/просадка, мм")
+    crack_width = models.FloatField(null=True, blank=True, verbose_name="Раскрытие трещины, мм")
     equipment_malfunction = models.BooleanField(default=False, verbose_name="Поломка затворов/насосов/механической части")
     detected_wear_override = models.FloatField(null=True, blank=True, verbose_name="Фактический износ, зафиксированный на месте, %")
 
