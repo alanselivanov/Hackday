@@ -1,0 +1,195 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+}
+
+.page {
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--heading-size, 20px);
+  font-weight: 700;
+  line-height: 1.3;
+  color: #1a365d;
+}
+
+.panelTitle {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d3748;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #cbd5e0);
+}
+
+.sectionHint {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary, #4a5568);
+}
+
+.sectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mapSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mapSectionFullscreen {
+  flex: 1;
+  min-height: 100vh;
+  padding: 0;
+}
+
+.mapLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 12px;
+  min-height: 560px;
+}
+
+.mapSectionFullscreen .mapLayout {
+  display: block;
+  min-height: 100vh;
+}
+
+.mapCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+}
+
+.fullscreenDetails {
+  position: fixed;
+  top: 56px;
+  right: 12px;
+  bottom: 72px;
+  z-index: 1002;
+  width: 360px;
+  max-width: calc(100vw - 24px);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
+}
+
+.detailsCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+  max-height: 620px;
+}
+
+.loadingCard,
+.errorCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+  color: var(--text-secondary, #4a5568);
+}
+
+.errorCard {
+  border-color: #feb2b2;
+  background: #fff5f5;
+}
+
+.errorCard strong {
+  color: #c53030;
+}
+
+.explanation {
+  background: #f7fafc;
+}
+
+.explanationTitle {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.explanationText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary, #4a5568);
+  max-width: 900px;
+}
+
+@media (max-width: 1400px) {
+  .statsRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .mapLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .detailsCard {
+    max-height: none;
+  }
+
+  .sectionHead {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 12px;
+  }
+
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .fullscreenDetails {
+    top: auto;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    max-height: 42vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+}
