@@ -1,19 +1,19 @@
 import type { FacilityType, RepairStatus } from '@/entities/facility/model/types';
 
 export const FACILITY_TYPE_LABELS: Record<FacilityType, string> = {
-  canal: 'Canal',
-  post: 'Hydrological post',
-  sluice: 'Sluice',
-  intake: 'Water intake',
-  pumping: 'Pumping station',
-  dam_dyke: 'Dam / dyke',
+  canal: 'Канал',
+  post: 'Гидропост',
+  sluice: 'Шлюз',
+  intake: 'Водозабор',
+  pumping: 'Насосная станция',
+  dam_dyke: 'Плотина / дамба',
 };
 
 export const REPAIR_STATUS_LABELS: Record<RepairStatus, string> = {
-  normal: 'Normal',
-  inspection_required: 'Need inspection',
-  repair_required: 'Need repair',
-  critical: 'Critical',
+  normal: 'Норма',
+  inspection_required: 'Требуется осмотр',
+  repair_required: 'Требуется ремонт',
+  critical: 'Критическое состояние',
 };
 
 export const REPAIR_STATUS_COLORS: Record<RepairStatus, string> = {
@@ -23,21 +23,31 @@ export const REPAIR_STATUS_COLORS: Record<RepairStatus, string> = {
   critical: '#ef4444',
 };
 
-/** Pilot segment of the Irtysh River (Pavlodar region, KZ) — [lat, lng] */
+export const PILOT_BBOX = {
+  south: 51.8,
+  west: 74.8,
+  north: 53.3,
+  east: 77.6,
+};
+
+/** Узкий пилотный участок реки Иртыш в заданном bbox, формат Leaflet: [lat, lng]. */
 export const IRTYSH_PILOT_POLYLINE: [number, number][] = [
-  [52.48, 76.52],
-  [52.46, 76.68],
-  [52.43, 76.84],
-  [52.40, 77.00],
-  [52.37, 77.16],
-  [52.34, 77.32],
-  [52.31, 77.48],
-  [52.28, 77.64],
+  [52.2, 74.86],
+  [52.27, 75.08],
+  [52.34, 75.32],
+  [52.41, 75.58],
+  [52.5, 75.88],
+  [52.58, 76.18],
+  [52.64, 76.46],
+  [52.7, 76.78],
+  [52.78, 77.08],
+  [52.88, 77.34],
+  [52.98, 77.56],
 ];
 
-export const PILOT_MAP_CENTER: [number, number] = [52.38, 77.08];
+export const PILOT_MAP_CENTER: [number, number] = [52.55, 76.2];
 
 export const PILOT_MAP_BOUNDS: [[number, number], [number, number]] = [
-  [52.24, 76.46],
-  [52.52, 77.72],
+  [PILOT_BBOX.south, PILOT_BBOX.west],
+  [PILOT_BBOX.north, PILOT_BBOX.east],
 ];

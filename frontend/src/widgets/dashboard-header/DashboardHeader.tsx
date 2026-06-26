@@ -1,32 +1,24 @@
-import { Card } from '@/shared/ui/Card';
 import styles from './DashboardHeader.module.css';
 
-const META_CARDS = [
-  { label: 'Pilot area', value: 'Irtysh River segment' },
-  { label: 'Data source', value: 'Excel-based hydraulic structures catalog' },
-  { label: 'Mode', value: 'Mock data / API-ready frontend' },
-];
-
 export function DashboardHeader() {
+  const today = new Date().toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   return (
     <header className={styles.header}>
-      <div className={styles.brand}>
-        <div className={styles.logoMark} aria-hidden />
-        <div>
-          <h1 className={styles.title}>Irtysh Hydro Monitoring</h1>
-          <p className={styles.subtitle}>
-            Pilot segment digital catalog and condition analysis
-          </p>
+      <div className={styles.mainRow}>
+        <div className={styles.brand}>
+          <h1 className={styles.title}>Мониторинг гидротехнических сооружений</h1>
+          <p className={styles.subtitle}>Пилотный участок реки Иртыш · Павлодарская область</p>
         </div>
-      </div>
 
-      <div className={styles.metaGrid}>
-        {META_CARDS.map((item) => (
-          <Card key={item.label} padding="sm" className={styles.metaCard}>
-            <span className={styles.metaLabel}>{item.label}</span>
-            <span className={styles.metaValue}>{item.value}</span>
-          </Card>
-        ))}
+        <div className={styles.aside}>
+          <span className={styles.date}>{today}</span>
+          <span className={styles.modeBadge}>демонстрационный режим</span>
+        </div>
       </div>
     </header>
   );

@@ -1,70 +1,67 @@
 .header {
+  padding-bottom: 14px;
+  border-bottom: 2px solid #2b6cb0;
+}
+
+.mainRow {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 20px;
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.logoMark {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0d9488 0%, #0284c7 100%);
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
+  min-width: 0;
 }
 
 .title {
   margin: 0;
-  font-size: 28px;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.02em;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #1a365d;
 }
 
 .subtitle {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   font-size: 15px;
-  color: #64748b;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #4a5568;
 }
 
-.metaGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.metaCard {
+.aside {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-.metaLabel {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #64748b;
-}
-
-.metaValue {
+.date {
   font-size: 13px;
-  font-weight: 600;
-  color: #0f172a;
+  color: #4a5568;
 }
 
-@media (max-width: 900px) {
-  .metaGrid {
-    grid-template-columns: 1fr;
+.modeBadge {
+  padding: 3px 8px;
+  border: 1px solid #cbd5e0;
+  border-radius: 3px;
+  background: #f7fafc;
+  font-size: 12px;
+  color: #4a5568;
+}
+
+@media (max-width: 640px) {
+  .mainRow {
+    flex-direction: column;
+  }
+
+  .aside {
+    align-items: flex-start;
   }
 
   .title {
-    font-size: 22px;
+    font-size: 20px;
   }
 }

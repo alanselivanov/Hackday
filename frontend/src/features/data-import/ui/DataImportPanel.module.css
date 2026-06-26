@@ -1,0 +1,60 @@
+.panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid var(--border, #cbd5e0);
+  border-radius: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  color: #1a365d;
+}
+
+.hint {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, #4a5568);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.input {
+  max-width: 260px;
+  font-size: 13px;
+}
+
+.success,
+.error {
+  margin: 0;
+  align-self: center;
+  font-size: 13px;
+}
+
+.success {
+  color: #276749;
+}
+
+.error {
+  color: #c53030;
+}
+
+@media (max-width: 980px) {
+  .panel {
+    flex-direction: column;
+  }
+
+  .controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}

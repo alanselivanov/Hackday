@@ -17,11 +17,18 @@ function DetailRow({ label, value }: { label: string; value: string | number | n
   );
 }
 
+function formatSpecificValue(value: unknown) {
+  if (value == null || value === '') return '—';
+  if (typeof value === 'boolean') return value ? 'Да' : 'Нет';
+  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toFixed(2);
+  return String(value);
+}
+
 export function ObjectDetailsPanel({ facility }: ObjectDetailsPanelProps) {
   if (!facility) {
     return (
       <div className={styles.empty}>
-        <p>Select an object on the map or table to view details.</p>
+        <p>Выберите объект на карте или в таблице, чтобы посмотреть детали.</p>
       </div>
     );
   }
@@ -35,30 +42,51 @@ export function ObjectDetailsPanel({ facility }: ObjectDetailsPanelProps) {
       </header>
 
       <dl className={styles.list}>
-        <DetailRow label="Water source" value={facility.water_source} />
-        <DetailRow label="District" value={facility.district} />
+        <DetailRow label="Водоисточник" value={facility.water_source} />
+        <DetailRow label="Район" value={facility.district} />
+        <DetailRow label="Сельский округ" value={facility.rural_district} />
+        <DetailRow label="Кадастровый N" value={facility.cadastral_number} />
+        <DetailRow label="Госакт" value={facility.state_act} />
         <DetailRow
-          label="Coordinates"
+          label="Координаты"
           value={`${facility.location.lat.toFixed(4)}, ${facility.location.lng.toFixed(4)}`}
         />
-        <DetailRow label="Year built" value={facility.year_built} />
-        <DetailRow label="Year balanced" value={facility.year_balanced} />
-        <DetailRow label="Wear %" value={facility.wear_percentage.toFixed(1)} />
-        <DetailRow label="Technical condition" value={facility.technical_condition} />
+        <DetailRow label="Год ввода" value={facility.year_built} />
+        <DetailRow label="Год на балансе" value={facility.year_balanced} />
+        <DetailRow label="Износ, %" value={facility.wear_percentage.toFixed(1)} />
+        <DetailRow label="Тех. состояние" value={facility.technical_condition} />
+        <DetailRow label="Статус ремонта" value={facility.repair_status_label} />
         <DetailRow
-          label="Efficiency (project)"
+          label="КПД проектный"
           value={facility.efficiency_project?.toFixed(2)}
         />
-        <DetailRow label="Efficiency (fact)" value={facility.efficiency_fact?.toFixed(2)} />
-        <DetailRow label="Importance" value={facility.calculated_importance} />
-        <DetailRow label="Next inspection" value={facility.next_inspection_date} />
-        <DetailRow label="Risk score" value={facility.risk_score} />
+        <DetailRow label="КПД фактический" value={facility.efficiency_fact?.toFixed(2)} />
+        <DetailRow
+          label="Аварийность"
+          value={facility.is_emergency_prone ? 'Повышенная' : 'Нет флага'}
+        />
+        <DetailRow
+          label="Важность"
+          value={facility.calculated_importance_display}
+        />
+        <DetailRow
+          label="Интервал осмотра, дней"
+          value={facility.inspection_interval_days}
+        />
+        <DetailRow label="Следующий осмотр" value={facility.next_inspection_date} />
       </dl>
 
-      <section className={styles.recommendation}>
-        <h4>Recommendation</h4>
-        <p>{facility.recommendation}</p>
-      </section>
+      {facility.specific && Object.keys(facility.specific).length > 0 && (
+        <section className={styles.specific}>
+          <h4>Параметры типа объекта</h4>
+          <dl className={styles.list}>
+            {Object.entries(facility.specific).map(([key, value]) => (
+              <DetailRow key={key} label={key} value={formatSpecificValue(value)} />
+            ))}
+          </dl>
+        </section>
+      )}
+
     </div>
   );
 }

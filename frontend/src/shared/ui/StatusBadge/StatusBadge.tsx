@@ -3,12 +3,12 @@ import { REPAIR_STATUS_COLORS } from '@/shared/config/constants';
 import styles from './StatusBadge.module.css';
 
 interface StatusBadgeProps {
-  status: RepairStatus;
-  label: string;
+  status: RepairStatus | null | undefined;
+  label: string | null | undefined;
 }
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
-  const color = REPAIR_STATUS_COLORS[status];
+  const color = status ? REPAIR_STATUS_COLORS[status] : '#718096';
 
   return (
     <span
@@ -20,7 +20,7 @@ export function StatusBadge({ status, label }: StatusBadgeProps) {
       }}
     >
       <span className={styles.dot} style={{ backgroundColor: color }} />
-      {label}
+      {label ?? '—'}
     </span>
   );
 }

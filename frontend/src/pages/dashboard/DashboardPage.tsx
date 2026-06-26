@@ -1,130 +1,231 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchFacilities } from '@/api/facilitiesApi';
-import { ObjectFilters } from '@/features/object-filters/ui/ObjectFilters';
+import type { EnrichedHydroFacility } from '@/entities/facility/model/types';
+import { ImportDataPage } from '@/pages/import-data/ImportDataPage';
+import { RegistryPage } from '@/pages/registry/RegistryPage';
+import { ReportsPage } from '@/pages/reports/ReportsPage';
+import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { StatCard } from '@/shared/ui/StatCard';
-import { StatusBadge } from '@/shared/ui/StatusBadge';
 import { AnalyticsCharts } from '@/widgets/analytics/AnalyticsCharts';
+import { AppSidebar, type SidebarPage } from '@/widgets/app-sidebar/AppSidebar';
 import { DashboardHeader } from '@/widgets/dashboard-header/DashboardHeader';
 import { ObjectDetailsPanel } from '@/widgets/object-details/ObjectDetailsPanel';
-import { HydroObjectsTable } from '@/widgets/objects-table/HydroObjectsTable';
 import { PilotMap } from '@/widgets/pilot-map/PilotMap';
 import styles from './DashboardPage.module.css';
 import {
   DEFAULT_FILTERS,
   getTechnicalConditions,
+  getUniqueValues,
   useDashboardStats,
   useFilteredFacilities,
 } from './useDashboardData';
 
 export function DashboardPage() {
-  const allFacilities = useMemo(() => fetchFacilities(), []);
+  const [activePage, setActivePage] = useState<SidebarPage>('dashboard');
+  const [allFacilities, setAllFacilities] = useState<EnrichedHydroFacility[]>([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
+  const [criticalOnly, setCriticalOnly] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadFacilities = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      const facilities = await fetchFacilities();
+      setAllFacilities(facilities);
+      setSelectedId((currentId) =>
+        currentId != null && facilities.some((facility) => facility.id === currentId)
+          ? currentId
+          : null,
+      );
+    } catch (caughtError) {
+      setLoadError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Не удалось загрузить данные из backend',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadFacilities();
+  }, [loadFacilities]);
 
   const filteredFacilities = useFilteredFacilities(allFacilities, filters);
+  const mapFacilities = useMemo(() => {
+    if (!criticalOnly) return allFacilities;
+    return allFacilities.filter((facility) => facility.repair_status === 'critical');
+  }, [allFacilities, criticalOnly]);
+
   const stats = useDashboardStats(allFacilities);
   const technicalConditions = useMemo(
     () => getTechnicalConditions(allFacilities),
     [allFacilities],
   );
+  const waterSources = useMemo(
+    () => getUniqueValues(allFacilities, 'water_source'),
+    [allFacilities],
+  );
+  const districts = useMemo(
+    () => getUniqueValues(allFacilities, 'district'),
+    [allFacilities],
+  );
+  const ruralDistricts = useMemo(
+    () => getUniqueValues(allFacilities, 'rural_district'),
+    [allFacilities],
+  );
+  const selectedFacility = allFacilities.find((facility) => facility.id === selectedId) ?? null;
 
-  const selectedFacility =
-    allFacilities.find((f) => f.id === selectedId) ?? null;
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && mapFullscreen) {
+        setMapFullscreen(false);
+      }
+    };
 
-  const handleResetFilters = () => setFilters(DEFAULT_FILTERS);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mapFullscreen]);
+
+  useEffect(() => {
+    document.body.style.overflow = mapFullscreen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mapFullscreen]);
+
+  const handleResetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setCriticalOnly(false);
+  };
+
+  const navigate = (page: SidebarPage) => {
+    setMapFullscreen(false);
+    setActivePage(page);
+  };
+
+  const renderDashboard = () => (
+    <>
+      <section className={styles.statsRow} aria-label="Сводные показатели">
+        <StatCard label="Всего сооружений" value={stats.total} accent="teal" />
+        <StatCard label="Норма" value={stats.normal} accent="green" />
+        <StatCard label="Требуется осмотр" value={stats.inspection} accent="yellow" />
+        <StatCard label="Требуется ремонт" value={stats.repair} accent="orange" />
+        <StatCard label="Критическое состояние" value={stats.critical} accent="red" />
+      </section>
+
+      {loadError && (
+        <Card padding="md" className={styles.errorCard}>
+          <strong>Backend недоступен или вернул ошибку.</strong>
+          <span>{loadError}</span>
+          <Button size="sm" onClick={() => void loadFacilities()}>
+            Повторить загрузку
+          </Button>
+        </Card>
+      )}
+
+      <section className={mapFullscreen ? styles.mapSectionFullscreen : styles.mapSection}>
+        {!mapFullscreen && (
+          <div className={styles.sectionHead}>
+            <div>
+              <h2 className={styles.sectionTitle}>Карта объектов</h2>
+              <p className={styles.sectionHint}>
+                Данные загружаются из backend endpoint <code>/api/facilities/</code>
+              </p>
+            </div>
+            <div className={styles.sectionActions}>
+              <Button
+                variant={criticalOnly ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setCriticalOnly((value) => !value)}
+              >
+                {criticalOnly ? 'Показать все' : 'Только критичные'}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)}>
+                Сбросить выбор
+              </Button>
+              {selectedId != null && (
+                <Button variant="ghost" size="sm" onClick={() => navigate('registry')}>
+                  К реестру
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => void loadFacilities()}>
+                Обновить из БД
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {isLoading ? (
+          <Card padding="lg" className={styles.loadingCard}>
+            Загружаю объекты из базы данных...
+          </Card>
+        ) : (
+          <div className={styles.mapLayout}>
+            <Card padding="sm" className={styles.mapCard}>
+              <PilotMap
+                facilities={mapFacilities}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                isFullscreen={mapFullscreen}
+                onToggleFullscreen={() => setMapFullscreen((value) => !value)}
+              />
+            </Card>
+
+            <Card
+              padding="md"
+              className={mapFullscreen ? styles.fullscreenDetails : styles.detailsCard}
+            >
+              <h2 className={styles.panelTitle}>Карточка объекта</h2>
+              <ObjectDetailsPanel facility={selectedFacility} />
+            </Card>
+          </div>
+        )}
+      </section>
+
+      {!mapFullscreen && !isLoading && (
+        <section>
+          <h2 className={styles.sectionTitle}>Сводная аналитика</h2>
+          <p className={styles.sectionHint}>Распределение по статусам, типам и районам</p>
+          <AnalyticsCharts facilities={allFacilities} />
+        </section>
+      )}
+    </>
+  );
 
   return (
-    <div className={styles.page}>
-      <DashboardHeader />
+    <div className={styles.shell}>
+      {!mapFullscreen && <AppSidebar activePage={activePage} onNavigate={navigate} />}
 
-      <section className={styles.statsRow}>
-        <StatCard label="Total facilities" value={stats.total} accent="teal" />
-        <StatCard label="Normal" value={stats.normal} accent="green" />
-        <StatCard label="Need inspection" value={stats.inspection} accent="yellow" />
-        <StatCard label="Need repair" value={stats.repair} accent="orange" />
-        <StatCard label="Critical" value={stats.critical} accent="red" />
-        <StatCard label="Average risk score" value={stats.avgRisk} accent="teal" />
-      </section>
+      <main className={styles.page}>
+        {!mapFullscreen && <DashboardHeader />}
 
-      <section className={styles.mapSection}>
-        <Card padding="sm" className={styles.mapCard}>
-          <h2 className={styles.sectionTitle}>Interactive map — pilot segment</h2>
-          <PilotMap
-            facilities={filteredFacilities}
+        {activePage === 'dashboard' && renderDashboard()}
+        {activePage === 'registry' && (
+          <RegistryPage
+            facilities={allFacilities}
+            filteredFacilities={filteredFacilities}
+            filters={filters}
             selectedId={selectedId}
+            technicalConditions={technicalConditions}
+            waterSources={waterSources}
+            districts={districts}
+            ruralDistricts={ruralDistricts}
+            onChangeFilters={setFilters}
+            onResetFilters={handleResetFilters}
             onSelect={setSelectedId}
           />
-        </Card>
-
-        <Card padding="md" className={styles.detailsCard}>
-          <h2 className={styles.sectionTitle}>Object details</h2>
-          <ObjectDetailsPanel facility={selectedFacility} />
-        </Card>
-      </section>
-
-      <section className={styles.riskSection}>
-        <Card padding="md">
-          <h2 className={styles.sectionTitle}>Highest-risk objects</h2>
-          <ul className={styles.riskList}>
-            {stats.topRisk.map((facility) => (
-              <li key={facility.id}>
-                <button
-                  type="button"
-                  className={
-                    facility.id === selectedId
-                      ? `${styles.riskItem} ${styles.riskItemSelected}`
-                      : styles.riskItem
-                  }
-                  onClick={() => setSelectedId(facility.id)}
-                >
-                  <span className={styles.riskName}>{facility.name}</span>
-                  <span className={styles.riskMeta}>
-                    <StatusBadge
-                      status={facility.repair_status}
-                      label={facility.repair_status_label}
-                    />
-                    <span className={styles.riskScore}>{facility.risk_score}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </section>
-
-      <section className={styles.tableSection}>
-        <h2 className={styles.sectionTitle}>Catalog objects</h2>
-        <ObjectFilters
-          filters={filters}
-          technicalConditions={technicalConditions}
-          onChange={setFilters}
-          onReset={handleResetFilters}
-          resultCount={filteredFacilities.length}
-        />
-        <HydroObjectsTable
-          facilities={filteredFacilities}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-        />
-      </section>
-
-      <section>
-        <h2 className={styles.sectionTitle}>Analytics overview</h2>
-        <AnalyticsCharts facilities={allFacilities} />
-      </section>
-
-      <section>
-        <Card padding="lg" className={styles.explanation}>
-          <h2 className={styles.explanationTitle}>Rule-based assessment model</h2>
-          <p className={styles.explanationText}>
-            The system classifies hydraulic structures using technical condition,
-            commissioning year, efficiency, wear level, emergency flag, inspection date
-            and data completeness. The model can later be extended with GIS-based
-            detection, satellite imagery and machine learning.
-          </p>
-        </Card>
-      </section>
+        )}
+        {activePage === 'import' && <ImportDataPage onImported={loadFacilities} />}
+        {activePage === 'reports' && <ReportsPage facilities={allFacilities} />}
+      </main>
     </div>
   );
 }

@@ -32,7 +32,9 @@ function buildStatusData(facilities: EnrichedHydroFacility[]) {
   };
 
   facilities.forEach((f) => {
-    counts[f.repair_status] += 1;
+    if (f.repair_status) {
+      counts[f.repair_status] += 1;
+    }
   });
 
   return (Object.keys(counts) as RepairStatus[]).map((status) => ({
@@ -76,7 +78,7 @@ export function AnalyticsCharts({ facilities }: AnalyticsChartsProps) {
   return (
     <div className={styles.grid}>
       <Card className={styles.chartCard}>
-        <h3 className={styles.title}>By repair status</h3>
+        <h3 className={styles.title}>По статусу состояния</h3>
         <ResponsiveContainer width="100%" height={260}>
           <PieChart>
             <Pie
@@ -100,7 +102,7 @@ export function AnalyticsCharts({ facilities }: AnalyticsChartsProps) {
       </Card>
 
       <Card className={styles.chartCard}>
-        <h3 className={styles.title}>By facility type</h3>
+        <h3 className={styles.title}>По типу сооружений</h3>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={typeData} margin={{ top: 8, right: 8, left: 0, bottom: 40 }}>
             <XAxis
@@ -123,7 +125,7 @@ export function AnalyticsCharts({ facilities }: AnalyticsChartsProps) {
       </Card>
 
       <Card className={styles.chartCard}>
-        <h3 className={styles.title}>By district</h3>
+        <h3 className={styles.title}>По районам</h3>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={districtData} layout="vertical" margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
             <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />

@@ -18,19 +18,18 @@ export function HydroObjectsTable({
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Type</th>
-            <th>District</th>
-            <th>Technical condition</th>
-            <th>Wear %</th>
-            <th>Fact efficiency</th>
-            <th>Status</th>
-            <th>Risk score</th>
+            <th>№</th>
+            <th>Название</th>
+            <th>Тип</th>
+            <th>Район</th>
+            <th>Тех. состояние</th>
+            <th>Износ, %</th>
+            <th>КПД факт.</th>
+            <th>Статус</th>
           </tr>
         </thead>
         <tbody>
-          {facilities.map((facility) => {
+          {facilities.map((facility, index) => {
             const isSelected = facility.id === selectedId;
 
             return (
@@ -39,7 +38,7 @@ export function HydroObjectsTable({
                 className={isSelected ? styles.selected : undefined}
                 onClick={() => onSelect(facility.id)}
               >
-                <td>{facility.id}</td>
+                <td>{index + 1}</td>
                 <td className={styles.nameCell}>{facility.name}</td>
                 <td>{facility.facility_type_label}</td>
                 <td>{facility.district}</td>
@@ -56,7 +55,6 @@ export function HydroObjectsTable({
                     label={facility.repair_status_label}
                   />
                 </td>
-                <td className={styles.riskCell}>{facility.risk_score}</td>
               </tr>
             );
           })}
@@ -64,7 +62,7 @@ export function HydroObjectsTable({
       </table>
 
       {facilities.length === 0 && (
-        <p className={styles.empty}>No objects match the current filters.</p>
+        <p className={styles.empty}>По текущим фильтрам объекты не найдены.</p>
       )}
     </div>
   );
