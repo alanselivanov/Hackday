@@ -112,6 +112,7 @@ INSTALLED_APPS = [
     "monitoring",
     "analytics",
     "osm_import",
+    "ingestion",
 ]
 
 MIDDLEWARE = [
